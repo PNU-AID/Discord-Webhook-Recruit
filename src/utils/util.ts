@@ -2,7 +2,7 @@ import fs from "fs";
 import { HomepageList, KeywordList } from "../type/json";
 
 export function extractPostIdInId(contentId: string): number {
-  const splitedContentId = contentId.split("-").at(-1);
+  const splitedContentId = contentId.split("/").at(-1);
   if (splitedContentId) {
     return Number(splitedContentId);
   }
@@ -38,8 +38,16 @@ export function updateLatestPostIndex(id: number) {
 export function isRelatedToAi(text: string) {
   const keywordFile = fs.readFileSync("data/keyword.json", "utf-8");
   const keywordList = JSON.parse(keywordFile) as KeywordList;
+  const lowerText = text.toLowerCase();
 
   return keywordList.aiKeywords.some(
-    (keyword) => text.includes(keyword) || text.includes(keyword.toUpperCase())
+    (keyword) =>
+      lowerText.includes(keyword) &&
+      !lowerText.includes("research") &&
+      !lowerText.includes("리서치")
   );
+}
+
+export function removeExtraSpaces(sentence: string): string {
+  return sentence.replace(/\s+/g, " ");
 }
