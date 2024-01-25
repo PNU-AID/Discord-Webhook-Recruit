@@ -1,6 +1,10 @@
 import Koa from "koa";
 import cron from "node-cron";
-import { crawlWebsite } from "./job";
+import dotenv from "dotenv";
+
+import { crawlWebsite } from "./utils/job";
+
+dotenv.config();
 
 const app = new Koa();
 

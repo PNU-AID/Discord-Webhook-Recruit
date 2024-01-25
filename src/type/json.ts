@@ -7,3 +7,7 @@ export interface HomepageItem {
   url: string;
   name: string;
 }
+
+export interface KeywordList {
+  aiKeywords: string[];
+}
