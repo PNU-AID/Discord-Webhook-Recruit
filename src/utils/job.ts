@@ -49,10 +49,12 @@ export async function crawlWebsite() {
           newLatestPostIndex = contentId;
         }
 
-        contentData.push({
-          contentUrl: contentUrl || "https://www.naver.com/",
-          contentLabel: contentLabel || "네이버(기본값)",
-        });
+        if (isRelatedToAi(contentLabel || "")) {
+          contentData.push({
+            contentUrl: contentUrl || "https://www.naver.com/",
+            contentLabel: contentLabel || "네이버(기본값)",
+          });
+        }
       });
 
       console.log(contentData);
@@ -63,25 +65,26 @@ export async function crawlWebsite() {
       );
     }
 
-    const contentDataRelatedToAi: ContentType[] = [];
+    // 본문이 AI와 관련되었는지 필터링하는 로직.
+    // const contentDataRelatedToAi: ContentType[] = [];
 
-    for (const contentItem of contentData) {
-      const response = await axios.get(contentItem.contentUrl);
-      const $ = cheerio.load(response.data);
-      const text = removeExtraSpaces($(".fusion-content-tb").text());
-      if (isRelatedToAi(text)) {
-        contentDataRelatedToAi.push(contentItem);
-      }
-    }
+    // for (const contentItem of contentData) {
+    //   const response = await axios.get(contentItem.contentUrl);
+    //   const $ = cheerio.load(response.data);
+    //   const text = removeExtraSpaces($(".fusion-content-tb").text());
+    //   if (isRelatedToAi(text)) {
+    //     contentDataRelatedToAi.push(contentItem);
+    //   }
+    // }
 
-    // 데이터에 템플릿을 적용 이후, 디코에 전송
-    if (contentDataRelatedToAi.length > 0) {
-      const contentWithTemplate = convertDataWithTemplate(
-        contentDataRelatedToAi
-      );
-      await sendDiscordNotification(contentWithTemplate);
-      updateLatestPostIndex(newLatestPostIndex);
-    }
+    // // 데이터에 템플릿을 적용 이후, 디코에 전송
+    // if (contentDataRelatedToAi.length > 0) {
+    //   const contentWithTemplate = convertDataWithTemplate(
+    //     contentDataRelatedToAi
+    //   );
+    //   await sendDiscordNotification(contentWithTemplate);
+    //   updateLatestPostIndex(newLatestPostIndex);
+    // }
 
     console.log("===", homepageItem.url, "작업 종료! ===");
   }
