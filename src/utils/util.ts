@@ -51,3 +51,12 @@ export function isRelatedToAi(text: string) {
 export function removeExtraSpaces(sentence: string): string {
   return sentence.replace(/\s+/g, " ");
 }
+
+export function isNotRelatedToAi(text: string) {
+  return (
+    text.includes("프론트") ||
+    text.includes("백엔드") ||
+    text.includes("Front") ||
+    text.includes("Back")
+  );
+}

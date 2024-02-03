@@ -6,6 +6,7 @@ import { ContentType } from "../type/content";
 import {
   extractPostIdInId,
   getHomepageList,
+  isNotRelatedToAi,
   isRelatedToAi,
   removeExtraSpaces,
   updateLatestPostIndex,
@@ -32,7 +33,7 @@ export async function crawlWebsite() {
       links.each(function () {
         // 파싱할 아이템의 수를 10개로 제한한다.
         // TODO: 비동기 iterate 작업이 너무 빨라서 10개를 조금 넘어서 멈춘다. 고치면 좋을 듯.
-        if (count > 10) {
+        if (count > 50) {
           return;
         }
         count += 1;
@@ -49,7 +50,10 @@ export async function crawlWebsite() {
           newLatestPostIndex = contentId;
         }
 
-        if (isRelatedToAi(contentLabel || "")) {
+        if (
+          isRelatedToAi(contentLabel || "") &&
+          !isNotRelatedToAi(contentLabel || "")
+        ) {
           contentData.push({
             contentUrl: contentUrl || "https://www.naver.com/",
             contentLabel: contentLabel || "네이버(기본값)",
@@ -85,6 +89,13 @@ export async function crawlWebsite() {
     //   await sendDiscordNotification(contentWithTemplate);
     //   updateLatestPostIndex(newLatestPostIndex);
     // }
+
+    // 데이터에 템플릿을 적용 이후, 디코에 전송
+    if (contentData.length > 0) {
+      const contentWithTemplate = convertDataWithTemplate(contentData);
+      await sendDiscordNotification(contentWithTemplate);
+      updateLatestPostIndex(newLatestPostIndex);
+    }
 
     console.log("===", homepageItem.url, "작업 종료! ===");
   }
