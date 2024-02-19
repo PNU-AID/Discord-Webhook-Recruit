@@ -16,7 +16,7 @@ export async function sendDiscordNotification(message: string) {
     if (!WEBHOOK_URL) {
       throw new Error("webhook url is nothing!!");
     }
-    axios.post(WEBHOOK_URL, {
+    const res = await axios.post(WEBHOOK_URL, {
       content: message,
       embed: [
         {
@@ -42,6 +42,7 @@ export async function sendDiscordNotification(message: string) {
         },
       ],
     });
+    // console.log("result:", res);
     return true;
   } catch (error) {
     console.error(error);

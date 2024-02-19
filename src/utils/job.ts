@@ -43,7 +43,7 @@ export async function crawlWebsite() {
           return;
         }
         const contentId = extractPostIdInId(contentUrl);
-        console.log(contentId);
+        // console.log(contentId);
         if (contentId <= latestPostIndex) {
           return;
         } else if (newLatestPostIndex < contentId) {
@@ -61,7 +61,7 @@ export async function crawlWebsite() {
         }
       });
 
-      console.log(contentData);
+      // console.log(contentData);
     } catch (error) {
       console.error(
         "다음 페이지를 읽다가 에러가 발생하였습니다.",
@@ -90,8 +90,10 @@ export async function crawlWebsite() {
     //   updateLatestPostIndex(newLatestPostIndex);
     // }
 
+    console.log(contentData);
     // 데이터에 템플릿을 적용 이후, 디코에 전송
     if (contentData.length > 0) {
+      console.log("=== 디스코드 채널에 채용정보 전송! ===");
       const contentWithTemplate = convertDataWithTemplate(contentData);
       await sendDiscordNotification(contentWithTemplate);
       updateLatestPostIndex(newLatestPostIndex);
