@@ -1,0 +1,33 @@
+name: Run schduling jobs for crawling.
+
+on:
+  schedule:
+    - cron: "0 11 * * 1-6" # UTC 기준 월~금 11:00(한국 기준 20:00)
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: "npm"
+
+      # Github Reposiroty의 Secret 가져와서 .env 생성하기
+      - name: Create .env file
+        run: jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' <<< "$SECRETS_CONTEXT" > .env
+        env:
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build app
+        run: npm run build
+
+      - name: Run app.ts
+        run: npm run scheduling
