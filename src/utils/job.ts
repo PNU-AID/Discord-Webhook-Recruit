@@ -74,19 +74,19 @@ export async function job() {
         Object.values(Catogory)
       );
       console.log(result);
-      if (result.labels[0] !== "Other") {
+      if (result.labels[0] !== Catogory.NOTAI) {
         contents.push(contentItem);
       }
     }
 
     console.log(contents);
     // 데이터에 템플릿을 적용 이후, 디코에 전송
-    // if (contentData.length > 0) {
-    //   console.log("=== 디스코드 채널에 채용정보 전송! ===");
-    //   const contentWithTemplate = convertDataWithTemplate(contents);
-    //   await sendDiscordNotification(contentWithTemplate);
-    //   updateLatestPostIndex(newLatestPostIndex);
-    // }
+    if (contentData.length > 0) {
+      console.log("=== 디스코드 채널에 채용정보 전송! ===");
+      const contentWithTemplate = convertDataWithTemplate(contents);
+      await sendDiscordNotification(contentWithTemplate);
+      updateLatestPostIndex(newLatestPostIndex);
+    }
 
     console.log("===", homepageItem.url, "작업 종료! ===");
   }
