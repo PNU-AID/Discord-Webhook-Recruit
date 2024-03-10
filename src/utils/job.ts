@@ -74,7 +74,11 @@ export async function job() {
         Object.values(Catogory)
       );
       console.log(result);
-      if (result.labels[0] !== Catogory.NOTAI) {
+      if (
+        result.labels[0] === Catogory.AI ||
+        result.labels[0] === Catogory.RESEARCH ||
+        result.labels[0] === Catogory.DATA
+      ) {
         contents.push(contentItem);
       }
     }

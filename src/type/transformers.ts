@@ -1,9 +1,10 @@
 export const Catogory = {
-  AI_NEWBIE: "AI 신입",
-  AI_EXPERT: "AI 경력",
-  DATA_NEWBIE: "Data 신입",
-  DATA_EXPERT: "Data 경력",
-  NOTAI: "AI 아닌 것",
+  AI: "AI",
+  RESEARCH: "RESEARCH",
+  WEB: "WEB",
+  ANDROID: "ANDROID",
+  IOS: "IOS",
+  DATA: "DATA",
 };
 
 export type Category = keyof typeof Catogory;
