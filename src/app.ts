@@ -1,13 +1,16 @@
 import dotenv from "dotenv";
+import http from "http";
+import querystring from "querystring";
+import url from "url";
 
-import { crawlWebsite } from "./utils/job";
+import { job } from "./utils/job";
 
 dotenv.config();
 
 async function main() {
   // 매일 대한민국 오후 8시에 실행
   console.log("크롤링 작업을 시작합니다.");
-  await crawlWebsite();
+  await job();
   console.log("크롤링 작업이 종료되었습니다.");
 }
 

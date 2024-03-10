@@ -12,8 +12,10 @@ import {
   updateLatestPostIndex,
 } from "./util";
 import { convertDataWithTemplate, sendDiscordNotification } from "./discord";
+import { MyZeroShotClassificationPipeline } from "./transformers";
+import { Catogory } from "../type/transformers";
 
-export async function crawlWebsite() {
+export async function job() {
   // 크롤링할 대상 사이트 리스트를 가져온다.
   const { homepageList, latestPostIndex } = getHomepageList();
   // console.log(homepageList);
@@ -69,35 +71,32 @@ export async function crawlWebsite() {
       );
     }
 
-    // 본문이 AI와 관련되었는지 필터링하는 로직.
-    // const contentDataRelatedToAi: ContentType[] = [];
+    //본문이 AI와 관련되었는지 필터링하는 로직.
+    const contents: ContentType[] = [];
+    for (const contentItem of contentData) {
+      const response = await axios.get(contentItem.contentUrl);
+      const $ = cheerio.load(response.data);
+      const text = removeExtraSpaces($(".fusion-content-tb").text());
+      const result = await MyZeroShotClassificationPipeline.classifyCategory(
+        text,
+        Object.keys(Catogory)
+      );
+      console.log(result);
+      // if (
+      //    result !== "Other"
+      // ) {
+      //   contents.push(contentItem);
+      // }
+    }
 
-    // for (const contentItem of contentData) {
-    //   const response = await axios.get(contentItem.contentUrl);
-    //   const $ = cheerio.load(response.data);
-    //   const text = removeExtraSpaces($(".fusion-content-tb").text());
-    //   if (isRelatedToAi(text)) {
-    //     contentDataRelatedToAi.push(contentItem);
-    //   }
-    // }
-
-    // // 데이터에 템플릿을 적용 이후, 디코에 전송
-    // if (contentDataRelatedToAi.length > 0) {
-    //   const contentWithTemplate = convertDataWithTemplate(
-    //     contentDataRelatedToAi
-    //   );
+    console.log(contents);
+    // 데이터에 템플릿을 적용 이후, 디코에 전송
+    // if (contentData.length > 0) {
+    //   console.log("=== 디스코드 채널에 채용정보 전송! ===");
+    //   const contentWithTemplate = convertDataWithTemplate(contents);
     //   await sendDiscordNotification(contentWithTemplate);
     //   updateLatestPostIndex(newLatestPostIndex);
     // }
-
-    console.log(contentData);
-    // 데이터에 템플릿을 적용 이후, 디코에 전송
-    if (contentData.length > 0) {
-      console.log("=== 디스코드 채널에 채용정보 전송! ===");
-      const contentWithTemplate = convertDataWithTemplate(contentData);
-      await sendDiscordNotification(contentWithTemplate);
-      updateLatestPostIndex(newLatestPostIndex);
-    }
 
     console.log("===", homepageItem.url, "작업 종료! ===");
   }

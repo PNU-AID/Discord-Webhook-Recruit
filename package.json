@@ -1,18 +1,20 @@
 {
   "name": "aid-discord-bot",
+  "type": "module",
   "version": "1.0.0",
   "description": "",
   "main": "app.js",
   "scripts": {
     "build": "tsc",
     "scheduling": "node dist/app.js",
-    "dev": "nodemon --exec ts-node src/app.ts"
+    "dev": "nodemon --exec ts-node --esm src/app.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@types/node-cron": "^3.0.11",
+    "@xenova/transformers": "^2.16.0",
     "axios": "^1.6.6",
     "cheerio": "^1.0.0-rc.12",
     "dotenv": "^16.4.1",
