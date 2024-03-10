@@ -3,6 +3,9 @@ name: Run schduling jobs for crawling.
 on:
   schedule:
     - cron: "0 11 * * 1-6" # UTC 기준 월~금 11:00(한국 기준 20:00)
+  push:
+    branches:
+      - main
 
 jobs:
   run-script:
@@ -11,11 +14,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: "npm"
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
 
       # Github Reposiroty의 Secret 가져와서 .env 생성하기
       - name: Create .env file
@@ -24,10 +24,15 @@ jobs:
           SECRETS_CONTEXT: ${{ toJson(secrets) }}
 
       - name: Install dependencies
-        run: npm install
-
-      - name: Build app
-        run: npm run build
+        run: bun install
 
       - name: Run app.ts
-        run: npm run scheduling
+        run: bun run scheduling
+
+      - name: Commit and push if changed
+        run: |
+          git config --local user.email "min49590@gmail.com"
+          git config --local user.name "KimCookieYa"
+          git add data/homepage.json
+          git commit -m "Update homepage.json" || exit 0  # 변경사항이 없으면 커밋하지 않음
+          git push
