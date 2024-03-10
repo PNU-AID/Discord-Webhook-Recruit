@@ -7,7 +7,7 @@ import {
 
 export class MyZeroShotClassificationPipeline {
   static task: PipelineType = "zero-shot-classification";
-  static model = "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7";
+  static model = "Xenova/nli-deberta-v3-small";
   static instance: ZeroShotClassificationPipeline;
 
   static async getInstance(
