@@ -75,9 +75,10 @@ export async function job() {
       );
       console.log(result);
       if (
-        result.labels[0] === Catogory.AI ||
-        result.labels[0] === Catogory.RESEARCH ||
-        result.labels[0] === Catogory.DATA
+        !contentItem.contentLabel.includes("경력") &&
+        (result.labels[0] === Catogory.AI ||
+          result.labels[0] === Catogory.RESEARCH ||
+          result.labels[0] === Catogory.DATA)
       ) {
         contents.push(contentItem);
       }
