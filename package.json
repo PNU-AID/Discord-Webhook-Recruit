@@ -5,7 +5,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "scheduling": "bun run src/app.ts"
+    "scheduling": "bun run src/app.ts",
+    "postinstall": "cd node_modules && git clone https://github.com/sroussey/transformers.js.git && cd transformers.js && git checkout -t origin/fix-node-wasm && npm install && npm run build && cd .."
   },
   "keywords": [],
   "author": "",
