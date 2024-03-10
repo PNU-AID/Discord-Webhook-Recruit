@@ -4,8 +4,10 @@ import querystring from "querystring";
 import url from "url";
 
 import { job } from "./utils/job";
+import axios from "axios";
 
 dotenv.config();
+axios.defaults.headers.common["Accept-Encoding"] = "gzip";
 
 async function main() {
   // 매일 대한민국 오후 8시에 실행

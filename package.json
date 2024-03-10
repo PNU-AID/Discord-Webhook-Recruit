@@ -1,13 +1,11 @@
 {
   "name": "aid-discord-bot",
   "type": "module",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "",
   "main": "app.js",
   "scripts": {
-    "build": "tsc",
-    "scheduling": "node dist/app.js",
-    "dev": "nodemon --exec ts-node --esm src/app.ts"
+    "scheduling": "bun run src/app.ts"
   },
   "keywords": [],
   "author": "",

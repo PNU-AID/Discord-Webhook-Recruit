@@ -35,7 +35,7 @@ export async function job() {
       links.each(function () {
         // 파싱할 아이템의 수를 10개로 제한한다.
         // TODO: 비동기 iterate 작업이 너무 빨라서 10개를 조금 넘어서 멈춘다. 고치면 좋을 듯.
-        if (count > 50) {
+        if (count > 10) {
           return;
         }
         count += 1;
@@ -45,22 +45,17 @@ export async function job() {
           return;
         }
         const contentId = extractPostIdInId(contentUrl);
-        // console.log(contentId);
+        console.log(contentLabel);
         if (contentId <= latestPostIndex) {
           return;
         } else if (newLatestPostIndex < contentId) {
           newLatestPostIndex = contentId;
         }
 
-        if (
-          isRelatedToAi(contentLabel || "") &&
-          !isNotRelatedToAi(contentLabel || "")
-        ) {
-          contentData.push({
-            contentUrl: contentUrl || "https://www.naver.com/",
-            contentLabel: contentLabel || "네이버(기본값)",
-          });
-        }
+        contentData.push({
+          contentUrl: contentUrl || "https://www.naver.com/",
+          contentLabel: contentLabel || "네이버(기본값)",
+        });
       });
 
       // console.log(contentData);
@@ -74,19 +69,14 @@ export async function job() {
     //본문이 AI와 관련되었는지 필터링하는 로직.
     const contents: ContentType[] = [];
     for (const contentItem of contentData) {
-      const response = await axios.get(contentItem.contentUrl);
-      const $ = cheerio.load(response.data);
-      const text = removeExtraSpaces($(".fusion-content-tb").text());
       const result = await MyZeroShotClassificationPipeline.classifyCategory(
-        text,
-        Object.keys(Catogory)
+        contentItem.contentLabel,
+        Object.values(Catogory)
       );
       console.log(result);
-      // if (
-      //    result !== "Other"
-      // ) {
-      //   contents.push(contentItem);
-      // }
+      if (result.labels[0] !== "Other") {
+        contents.push(contentItem);
+      }
     }
 
     console.log(contents);
