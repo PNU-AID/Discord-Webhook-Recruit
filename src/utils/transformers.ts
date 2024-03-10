@@ -3,7 +3,7 @@ import {
   PipelineType,
   ZeroShotClassificationOutput,
   ZeroShotClassificationPipeline,
-} from "@xenova/transformers";
+} from "transformers.js";
 
 export class MyZeroShotClassificationPipeline {
   static task: PipelineType = "zero-shot-classification";
