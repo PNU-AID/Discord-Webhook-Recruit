@@ -1,7 +1,4 @@
 import dotenv from "dotenv";
-import http from "http";
-import querystring from "querystring";
-import url from "url";
 
 import { job } from "./utils/job";
 import axios from "axios";

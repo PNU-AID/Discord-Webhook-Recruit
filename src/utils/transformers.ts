@@ -1,9 +1,10 @@
 import {
   pipeline,
   PipelineType,
+  ProgressCallback,
   ZeroShotClassificationOutput,
   ZeroShotClassificationPipeline,
-} from "transformers.js";
+} from "@huggingface/transformers";
 
 export class MyZeroShotClassificationPipeline {
   static task: PipelineType = "zero-shot-classification";
@@ -11,7 +12,7 @@ export class MyZeroShotClassificationPipeline {
   static instance: ZeroShotClassificationPipeline;
 
   static async getInstance(
-    progress_callback: Function | undefined = undefined
+    progress_callback: ProgressCallback | undefined = undefined
   ) {
     if (!this.instance) {
       console.log(

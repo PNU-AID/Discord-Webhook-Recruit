@@ -14,6 +14,7 @@ const HOMEPAGE_JSON = "data/homepage.json";
 export function getHomepageList() {
   const homepageListFile = fs.readFileSync(HOMEPAGE_JSON, "utf-8");
   const homepageList = JSON.parse(homepageListFile) as HomepageList;
+  // 다음 알림 전송때 중복으로 전송하지 않기 위해 latestPostIndex 기록
   const latestPostIndex = homepageList.latestPostIndex;
   return {
     homepageList,

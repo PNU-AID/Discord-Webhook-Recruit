@@ -1,14 +1,10 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 
-import { HomepageList } from "../type/json";
 import { ContentType } from "../type/content";
 import {
   extractPostIdInId,
   getHomepageList,
-  isNotRelatedToAi,
-  isRelatedToAi,
-  removeExtraSpaces,
   updateLatestPostIndex,
 } from "./util";
 import { convertDataWithTemplate, sendDiscordNotification } from "./discord";
