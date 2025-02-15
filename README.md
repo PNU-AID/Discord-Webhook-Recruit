@@ -86,3 +86,10 @@ AID_DISCORD_WEBHOOK_URL='Your Webhook URL'
       - ts파일을 실행하기 위한 패키지
     - typescript@5.4.2
       - js에 타입을 추가한 typescript
+
+## 개발 로그
+
+- 2024-2학기
+  - <a href='https://github.com/bluelemon61'><img src='https://avatars.githubusercontent.com/u/67902252?s=12&v=6' alt='profile image'/> bluelemon61</a> 패키지 최적화 및 README 작성
+- 2024-1학기
+  - <a href='https://github.com/KimCookieYa'><img src='https://avatars.githubusercontent.com/u/45006957?s=12&v=6' alt='profile image'/> KimCookieYa</a> 프로젝트 생성 및 개발
