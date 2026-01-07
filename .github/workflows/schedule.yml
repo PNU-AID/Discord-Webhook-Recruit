@@ -3,6 +3,7 @@ name: Run schduling jobs for crawling.
 on:
   schedule:
     - cron: "0 11 * * 1-6" # UTC 기준 월~토 11:00(한국 기준 20:00)
+  workflow_dispatch:
   push:
     branches:
       - main
