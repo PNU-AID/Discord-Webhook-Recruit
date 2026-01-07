@@ -1,94 +1,115 @@
 import os
 import logging
 import requests
-from transformers import pipeline
-from dotenv import load_dotenv  # 환경변수 로드용
-from PIL import Image
+import time
 from io import BytesIO
+from typing import Optional, Union
 
-# [핵심] 구글의 최신 라이브러리 (google-genai) 임포트
-# 기존 google.generativeai는 사용하지 않습니다.
+from dotenv import load_dotenv
+from PIL import Image
+from transformers import pipeline
+
+# 구글 GenAI SDK (google-genai)
 try:
     from google import genai
     from google.genai import types
 except ImportError:
     genai = None
 
-# 1. 환경 변수 강제 로드 (가장 먼저 실행)
+# 환경 변수 로드
 load_dotenv()
 
-# 2. 분류 모델 설정 (유지)
+# --- 설정 (Configuration) ---
 CLASSIFIER_MODEL = "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7"
 LABELS = ["AI/인공지능", "데이터/분석", "연구", "웹/앱 개발", "기타"]
 POSITIVE_LABELS = {"AI/인공지능", "데이터/분석", "연구"}
+GEMINI_MODEL_ID = "gemini-2.5-flash"
 
+# 지연 로딩(Lazy Loading)을 위한 싱글톤 인스턴스
 _classifier = None
-_client = None  # Gemini Client
+_client = None
 
 def get_classifier():
+    """
+    제로샷(Zero-Shot) 분류 파이프라인을 초기화하고 반환합니다.
+    모듈 임포트 시 불필요한 오버헤드를 줄이기 위해 지연 로딩을 사용합니다.
+    """
     global _classifier
     if not _classifier:
+        # device=-1은 CPU 실행을 강제합니다. (CUDA 사용 시 0으로 변경)
         _classifier = pipeline("zero-shot-classification", model=CLASSIFIER_MODEL, device=-1)
     return _classifier
 
 def get_gemini_client():
+    """
+    API 키 유효성 검사와 함께 구글 GenAI 클라이언트를 초기화합니다.
+    라이브러리가 없거나 키가 유효하지 않으면 None을 반환합니다.
+    """
     global _client
     if not _client:
-        # .env에서 키를 가져옵니다.
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
-            logging.error("❌ GEMINI_API_KEY is missing in .env file!")
+            logging.error("환경 변수에 GEMINI_API_KEY가 없습니다.")
             return None
         
         if not genai:
-            logging.error("❌ google-genai library is not installed! Run: pip install google-genai")
+            logging.error("google-genai 라이브러리를 찾을 수 없습니다. 'pip install google-genai'를 실행하세요.")
             return None
 
-        # 신규 SDK 클라이언트 초기화 (v1alpha/v1beta 자동 처리)
         try:
             _client = genai.Client(api_key=api_key)
         except Exception as e:
-            logging.error(f"Failed to initialize Gemini Client: {e}")
+            logging.error(f"GenAI 클라이언트 초기화 실패: {e}")
             return None
     return _client
 
 def classify_text(text: str) -> str:
-    if len(text) < 2: return "기타"
+    """
+    제로샷 분류(Zero-Shot Classification)를 사용하여 직무 설명을 사전 정의된 카테고리로 분류합니다.
+    분류 실패나 텍스트가 너무 짧을 경우 '기타'를 반환합니다.
+    """
+    if len(text) < 2:
+        return "기타"
+    
     try:
         classifier = get_classifier()
+        # 가설(Hypothesis) 템플릿을 사용하여 NLI 모델의 정확도 향상
         result = classifier(text, LABELS, hypothesis_template="This job is about {}.")
         return result["labels"][0]
     except Exception as e:
-        logging.warning(f"Classification failed: {e}")
+        logging.warning(f"분류 추론(Inference) 실패: {e}")
         return "기타"
 
 def is_ai_job(text: str) -> bool:
+    """채용 공고가 AI/데이터/연구와 관련이 있는지 판별합니다."""
     return classify_text(text) in POSITIVE_LABELS
 
-def download_image(image_url: str):
+def download_image(image_url: str) -> Optional[Image.Image]:
     """
-    URL에서 이미지를 다운로드하여 PIL Image 객체로 변환
+    URL에서 이미지를 다운로드하여 PIL Image 객체로 변환합니다.
+    실패 시 None을 반환합니다.
     """
     try:
-        if not image_url: return None
+        if not image_url:
+            return None
         response = requests.get(image_url, timeout=10)
         response.raise_for_status()
         return Image.open(BytesIO(response.content))
     except Exception as e:
-        logging.warning(f"Failed to download image: {e}")
+        logging.warning(f"이미지 다운로드 실패: {e}")
         return None
 
 def summarize_text(text: str, company: str = "", title: str = "", image_url: str = "") -> str:
     """
-    Gemini 2.5 Flash (New SDK)를 사용하여 채용 공고를 분석합니다.
+    Gemini 2.5 Flash를 사용하여 구조화된 직무 요약을 생성합니다.
+    이미지 URL이 제공되면 멀티모달 입력(텍스트+이미지)을 지원하며, 503 오류 발생 시 재시도합니다.
     """
     client = get_gemini_client()
     if not client:
-        return "⚠️ API 키 설정 오류 또는 라이브러리 미설치"
+        return "설정 오류: API 키 또는 라이브러리 설치를 확인하세요."
 
-    try:
-        # 프롬프트 구성
-        prompt_text = f"""
+    # 프롬프트 구성
+    prompt_text = f"""
 You are an expert IT Tech Recruiter.
 Analyze the provided job posting content (and image if available) to extract key information.
 Respond strictly in Korean.
@@ -106,30 +127,49 @@ Respond strictly in Korean.
 [Text Content]
 {text[:15000]}
 """
-        
-        contents = [prompt_text]
+    # 멀티모달 생성을 위한 페이로드 구성
+    contents = [prompt_text]
 
-        # 이미지 처리 (이미지가 있으면 리스트에 추가)
-        if image_url:
-            image_obj = download_image(image_url)
-            if image_obj:
-                logging.info("Run Gemini with Image...")
-                contents.append(image_obj)
+    if image_url:
+        image_obj = download_image(image_url)
+        if image_obj:
+            logging.info("멀티모달 콘텐츠 처리 중 (텍스트 + 이미지)")
+            contents.append(image_obj)
+        else:
+            logging.info("이미지 다운로드 실패, 텍스트로만 진행합니다.")
+
+    # --- 재시도(Retry) 로직 ---
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            # 신규 SDK 인터페이스를 사용하여 콘텐츠 생성
+            response = client.models.generate_content(
+                model=GEMINI_MODEL_ID,
+                contents=contents
+            )
+            
+            # Gemini Free Tier는 분당 요청 제한이 있으므로 필수입니다.
+            time.sleep(4)
+            
+            return response.text.strip()
+
+        except Exception as e:
+            if "429" in str(e) or "Quota" in str(e):
+                # 429 에러(제한 초과)가 뜨면 60초 푹 쉬었다가 재시도
+                logging.warning("API 제한 초과 (429). 60초 후 재시도...")
+                time.sleep(60)
+            elif "503" in str(e) or "Overloaded" in str(e) or "UNAVAILABLE" in str(e):
+                # 503(Overloaded) 등 일시적 서버 오류일 경우 대기 후 재시도
+                wait_time = 2 * (attempt + 1)
+                logging.warning(f"Gemini 서버 혼잡 (503). {wait_time}초 후 재시도... ({attempt + 1}/{max_retries})")
+                time.sleep(wait_time)
             else:
-                logging.info("Image download failed, running with text only.")
+                logging.error(f"Gemini 생성 실패: {e}")
+                return "요약 생성 중 오류가 발생했습니다."
+    
+    return "서버 혼잡으로 인해 요약을 생성하지 못했습니다."
 
-        # 생성 요청 (신규 SDK 문법)
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=contents
-        )
-        
-        return response.text.strip()
-
-    except Exception as e:
-        # 에러 발생 시 로그를 명확히 출력
-        logging.error(f"Gemini Summarization failed: {e}")
-        return "요약 생성 중 오류가 발생했습니다."
-
-# 구버전 호환성을 위해 남겨둔 빈 함수들 (main.py 에러 방지용)
-def run_ocr(image_url: str) -> str: return ""
+# --- 레거시 호환성 / 스텁(Stubs) ---
+def run_ocr(image_url: str) -> str:
+    """Deprecated: 레거시 코드의 임포트 에러 방지를 위한 Placeholder입니다."""
+    return ""
