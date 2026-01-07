@@ -1,0 +1,14 @@
+python-dotenv==1.0.1
+requests==2.32.3
+playwright==1.48.0
+numpy<2.0.0
+transformers==4.51.3
+sentencepiece
+protobuf
+llama-cpp-python
+huggingface-hub
+easyocr
+opencv-python-headless
+scipy
+google-genai
+pillow

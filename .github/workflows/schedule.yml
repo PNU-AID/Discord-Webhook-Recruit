@@ -1,38 +1,82 @@
-name: Run schduling jobs for crawling.
+name: Python Job Crawler
 
+# 언제 실행할지 정의
 on:
+  # 스케줄 실행: 매일 한국 시간 오후 8시 (UTC 11:00) 월~토 실행
   schedule:
-    - cron: "0 11 * * 1-6" # UTC 기준 월~토 11:00(한국 기준 20:00)
-  push:
-    branches:
-      - main
+    - cron: "0 11 * * 1-6"
+  # 수동 실행: GitHub Actions 탭에서 버튼 눌러서 즉시 실행 가능
+  workflow_dispatch:
+
+# [중요] 봇이 리포지토리 파일(homepage.json)을 수정하고 푸시하려면 이 권한이 필수입니다.
+permissions:
+  contents: write
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
+    timeout-minutes: 20 # 무한 루프 방지를 위해 20분 지나면 강제 종료
+
     steps:
+      # 1. 코드 내려받기 (기본 토큰 사용)
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # git diff를 제대로 수행하기 위해 전체 이력을 가져옵니다.
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v1
+      # 2. 파이썬 3.11 환경 설정
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip" # 라이브러리 설치 속도를 높이기 위해 캐시 사용
 
-      # Github Reposiroty의 Secret 가져와서 .env 생성하기
-      - name: Create .env file
-        run: jq -r 'to_entries|map("\(.key)=\(.value|tostring)")|.[]' <<< "$SECRETS_CONTEXT" > .env
-        env:
-          SECRETS_CONTEXT: ${{ toJson(secrets) }}
-
+      # 3. 필요한 라이브러리 설치
       - name: Install dependencies
-        run: bun install
+        run: |
+          python -m pip install --upgrade pip
 
-      - name: Run app.ts
-        run: bun run scheduling
+          # [최적화] CPU 버전 PyTorch 먼저 설치 (용량/속도 절약)
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
+          # requirements.txt에 있는 라이브러리 설치
+          pip install -r requirements.txt
+
+          # Playwright 브라우저(Chromium) 설치
+          playwright install --with-deps chromium
+
+      # 4. .env 파일 생성 (비밀키 주입) -> 이 부분이 제일 중요합니다!
+      - name: Create .env file
+        run: |
+          touch .env
+          # GitHub Secrets에 저장된 값들을 .env 파일로 옮깁니다.
+          echo "AID_DISCORD_WEBHOOK_URL=${{ secrets.AID_DISCORD_WEBHOOK_URL }}" >> .env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+          # 실제 전송 모드로 설정 (Dry Run 끄기)
+          echo "DRY_RUN=false" >> .env
+
+      # 5. 크롤러 실행 (여기서 homepage.json이 갱신됨)
+      - name: Run crawler
+        run: python main.py
+
+      # 6. 변경사항이 있으면 커밋하고 푸시 (봇 계정으로 서명)
       - name: Commit and push if changed
         run: |
-          git config --local user.email "min49590@gmail.com"
-          git config --local user.name "KimCookieYa"
+          # 공식 GitHub Actions 봇 계정으로 설정 (커밋 로그에 봇 아이콘이 뜸)
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # 변경된 파일(homepage.json) 스테이징
           git add data/homepage.json
-          git commit -m "Update homepage.json" || exit 0  # 변경사항이 없으면 커밋하지 않음
-          git push
+
+          # 변경사항이 있는지 검사
+          if ! git diff-index --quiet HEAD; then
+            echo "Changes detected. Committing..."
+            # [skip ci]를 붙이면 이 커밋으로 인해 또 다른 액션이 트리거되는 것을 방지함
+            git commit -m "Update homepage.json [skip ci]" 
+            
+            # 보호 규칙을 삭제했으므로 기본 토큰으로 바로 푸시 가능
+            git push
+          else
+            echo "No changes to homepage.json. Skipping push."
+          fi
