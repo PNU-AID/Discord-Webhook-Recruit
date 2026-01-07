@@ -76,7 +76,7 @@ jobs:
             git commit -m "Update homepage.json [skip ci]" 
             
             # 보호 규칙을 삭제했으므로 기본 토큰으로 바로 푸시 가능
-            git push
+            git push origin HEAD:${{ github.ref }}
           else
             echo "No changes to homepage.json. Skipping push."
           fi
