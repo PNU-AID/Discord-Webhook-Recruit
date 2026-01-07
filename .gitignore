@@ -2,3 +2,4 @@ node_modules
 dist
 .env
 transformers.js
+__pycache__/
