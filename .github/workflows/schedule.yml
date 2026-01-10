@@ -1,81 +1,97 @@
 name: Python Job Crawler
 
-# 언제 실행할지 정의
+# 트리거 설정
 on:
-  # 스케줄 실행: 매일 한국 시간 오후 8시 (UTC 11:00) 월~토 실행
+  # 정기 실행: 매일 한국 시간 오후 8시 (UTC 11:00) 월~토 실행
   schedule:
     - cron: "0 11 * * 1-6"
-  # 수동 실행: GitHub Actions 탭에서 버튼 눌러서 즉시 실행 가능
+
+  # 수동 실행: GitHub Actions 탭에서 버튼을 눌러 즉시 테스트 가능
   workflow_dispatch:
 
-# [중요] 봇이 리포지토리 파일(homepage.json)을 수정하고 푸시하려면 이 권한이 필수입니다.
+# 권한 설정: 봇이 리포지토리의 파일(homepage.json)을 수정하고 푸시하기 위해 필수
 permissions:
   contents: write
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-    timeout-minutes: 20 # 무한 루프 방지를 위해 20분 지나면 강제 종료
+    timeout-minutes: 20 # 프로세스가 멈출 경우를 대비해 20분 후 강제 종료
 
     steps:
-      # 1. 코드 내려받기 (기본 토큰 사용)
+      # 1. 소스 코드 체크아웃
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # git diff를 제대로 수행하기 위해 전체 이력을 가져옵니다.
+          fetch-depth: 0 # git diff를 정확히 수행하기 위해 전체 히스토리를 가져옴
 
-      # 2. 파이썬 3.11 환경 설정
+      # 2. Python 3.11 환경 설정 및 pip 캐싱 적용
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip" # 라이브러리 설치 속도를 높이기 위해 캐시 사용
+          cache: "pip" # requirements.txt가 변경되지 않았다면 pip 의존성 캐시를 자동 복구
 
-      # 3. 필요한 라이브러리 설치
+      # 3. Playwright 브라우저 캐시 설정
+      # 브라우저 바이너리(약 150MB+)를 매번 다운로드하는 시간을 절약합니다.
+      - name: Cache Playwright Browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright # Playwright 브라우저 설치 경로
+          # OS가 바뀌거나 의존성 파일이 바뀌면 캐시 키가 변경되어 새로 다운로드함
+          key: ${{ runner.os }}-playwright-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      # 4. 의존성 라이브러리 설치
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
 
-          # [최적화] CPU 버전 PyTorch 먼저 설치 (용량/속도 절약)
+          # [최적화] CPU 버전 PyTorch 설치
+          # 캐시(Setup Python 단계)가 있다면 다운로드 없이 즉시 설치됨
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-          # requirements.txt에 있는 라이브러리 설치
+          # 프로젝트 필수 라이브러리 설치
           pip install -r requirements.txt
 
           # Playwright 브라우저(Chromium) 설치
-          playwright install --with-deps chromium
+          # 캐시(Cache Playwright 단계)가 있다면 다운로드를 건너뛰고 시스템 의존성만 설치(--with-deps)
+          playwright install chromium --with-deps
 
-      # 4. .env 파일 생성 (비밀키 주입) -> 이 부분이 제일 중요합니다!
+      # 5. 환경 변수(.env) 생성
+      # GitHub Secrets에 저장된 민감 정보를 런타임 환경 변수 파일로 주입
       - name: Create .env file
         run: |
           touch .env
-          # GitHub Secrets에 저장된 값들을 .env 파일로 옮깁니다.
           echo "AID_DISCORD_WEBHOOK_URL=${{ secrets.AID_DISCORD_WEBHOOK_URL }}" >> .env
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
-          # 실제 전송 모드로 설정 (Dry Run 끄기)
+          # GitHub Actions 환경에서는 항상 '실전송 모드'로 동작
           echo "DRY_RUN=false" >> .env
 
-      # 5. 크롤러 실행 (여기서 homepage.json이 갱신됨)
+      # 6. 크롤러 메인 로직 실행
       - name: Run crawler
         run: python main.py
 
-      # 6. 변경사항이 있으면 커밋하고 푸시 (봇 계정으로 서명)
+      # 7. 변경 사항 커밋 및 푸시
       - name: Commit and push if changed
         run: |
-          # 공식 GitHub Actions 봇 계정으로 설정 (커밋 로그에 봇 아이콘이 뜸)
+          # 공식 GitHub Actions 봇 계정으로 커밋 서명
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          # 변경된 파일(homepage.json) 스테이징
+          # 데이터 파일 스테이징
           git add data/homepage.json
 
-          # 변경사항이 있는지 검사
+          # 변경 사항이 있는지 확인
           if ! git diff-index --quiet HEAD; then
             echo "Changes detected. Committing..."
-            # [skip ci]를 붙이면 이 커밋으로 인해 또 다른 액션이 트리거되는 것을 방지함
+            
+            # [skip ci] 태그: 이 커밋으로 인해 워크플로우가 무한 반복 트리거되는 것을 방지
             git commit -m "Update homepage.json [skip ci]" 
             
-            # 보호 규칙을 삭제했으므로 기본 토큰으로 바로 푸시 가능
+            # 현재 실행 중인 브랜치(HEAD)를 원격 저장소의 해당 브랜치로 명시적 푸시
             git push origin HEAD:${{ github.ref }}
           else
             echo "No changes to homepage.json. Skipping push."
